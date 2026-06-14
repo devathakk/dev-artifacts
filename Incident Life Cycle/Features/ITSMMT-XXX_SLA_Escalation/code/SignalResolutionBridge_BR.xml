@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script">
+  <sys_script action="INSERT_OR_UPDATE">
+    <abort_action>false</abort_action>
+    <action_delete>false</action_delete>
+    <action_insert>false</action_insert>
+    <action_query>false</action_query>
+    <action_update>true</action_update>
+    <active>true</active>
+    <add_message>false</add_message>
+    <advanced>true</advanced>
+    <change_fields>true</change_fields>
+    <client_callable>false</client_callable>
+    <collection>pa_kpi_signal</collection>
+    <condition>current.active == false &amp;&amp; previous.active == true</condition>
+    <description>Resolves u_anomaly_event when all PA KPI Signals for a CI return to normal (active=false).</description>
+    <filter_condition>activeSTARTSWITHfalse@active</filter_condition>
+    <name>SignalResolutionBridge</name>
+    <order>200</order>
+    <script><![CDATA[
+(function executeRule(current, previous) {
+
+    var ciSysId = current.cmdb_ci.toString();
+    if (!ciSysId) return;
+
+    // Check if any other active signals still exist for this CI
+    var activeSignals = new GlideRecord('pa_kpi_signal');
+    activeSignals.addQuery('cmdb_ci', ciSysId);
+    activeSignals.addQuery('active', true);
+    activeSignals.addQuery('sys_id', '!=', current.sys_id);
+    activeSignals.query();
+
+    if (activeSignals.hasNext()) {
+        // Other breaches still active — re-evaluate state downward only
+        var engine   = new ServiceStateEngine(ciSysId);
+        var eventGr  = new GlideRecord('u_anomaly_event');
+        eventGr.addQuery('u_configuration_item', ciSysId);
+        eventGr.addQuery('u_active', true);
+        eventGr.setLimit(1);
+        eventGr.query();
+
+        if (eventGr.next()) {
+            var newState = engine.evaluateTransition(eventGr.u_state.toString());
+            eventGr.u_state             = newState;
+            eventGr.u_last_evaluated_on = new GlideDateTime();
+            eventGr.update();
+        }
+        return;
+    }
+
+    // All signals resolved — close anomaly event
+    var resolveGr = new GlideRecord('u_anomaly_event');
+    resolveGr.addQuery('u_configuration_item', ciSysId);
+    resolveGr.addQuery('u_active', true);
+    resolveGr.query();
+
+    while (resolveGr.next()) {
+        resolveGr.u_active       = false;
+        resolveGr.u_state        = 1; // Normal
+        resolveGr.u_resolved_on  = new GlideDateTime();
+        resolveGr.update();
+        gs.info('SignalResolutionBridge: Anomaly event resolved for CI ' + ciSysId);
+    }
+
+})(current, previous);
+    ]]></script>
+    <sys_class_name>sys_script</sys_class_name>
+    <sys_name>SignalResolutionBridge</sys_name>
+    <sys_package display_value="ITSMMT Anomaly Detection" source="x_itsmmt_anomaly"/>
+    <sys_scope display_value="Global">global</sys_scope>
+    <when>after</when>
+  </sys_script>
+</record_update>
