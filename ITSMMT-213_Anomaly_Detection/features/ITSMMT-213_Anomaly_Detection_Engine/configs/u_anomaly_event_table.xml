@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_db_object">
+  <sys_db_object action="INSERT_OR_UPDATE">
+    <access>public</access>
+    <allow_configuration>true</allow_configuration>
+    <allow_ui_actions>true</allow_ui_actions>
+    <caller_access/>
+    <columns>
+      <!-- Configuration Item -->
+      <element action="INSERT_OR_UPDATE">
+        <column_label>Configuration Item</column_label>
+        <element>u_configuration_item</element>
+        <internal_type>reference</internal_type>
+        <max_length>32</max_length>
+        <reference>cmdb_ci</reference>
+        <mandatory>true</mandatory>
+      </element>
+      <!-- State (1=Normal, 2=Anomalous, 3=Degraded, 4=Outage) -->
+      <element action="INSERT_OR_UPDATE">
+        <column_label>State</column_label>
+        <element>u_state</element>
+        <internal_type>integer</internal_type>
+        <default_value>1</default_value>
+        <mandatory>true</mandatory>
+        <!-- Choice values handled via sys_choice records below -->
+      </element>
+      <!-- Active flag -->
+      <element action="INSERT_OR_UPDATE">
+        <column_label>Active</column_label>
+        <element>u_active</element>
+        <internal_type>boolean</internal_type>
+        <default_value>true</default_value>
+      </element>
+      <!-- Signal Source (reference to pa_kpi_signal) -->
+      <element action="INSERT_OR_UPDATE">
+        <column_label>Signal Source</column_label>
+        <element>u_signal_source</element>
+        <internal_type>reference</internal_type>
+        <max_length>32</max_length>
+        <reference>pa_kpi_signal</reference>
+      </element>
+      <!-- Signal Name -->
+      <element action="INSERT_OR_UPDATE">
+        <column_label>Signal Name</column_label>
+        <element>u_signal_name</element>
+        <internal_type>string</internal_type>
+        <max_length>255</max_length>
+      </element>
+      <!-- Signal Count -->
+      <element action="INSERT_OR_UPDATE">
+        <column_label>Signal Count</column_label>
+        <element>u_signal_count</element>
+        <internal_type>integer</internal_type>
+        <default_value>0</default_value>
+      </element>
+      <!-- Detected On -->
+      <element action="INSERT_OR_UPDATE">
+        <column_label>Detected On</column_label>
+        <element>u_detected_on</element>
+        <internal_type>glide_date_time</internal_type>
+      </element>
+      <!-- Last Evaluated On -->
+      <element action="INSERT_OR_UPDATE">
+        <column_label>Last Evaluated On</column_label>
+        <element>u_last_evaluated_on</element>
+        <internal_type>glide_date_time</internal_type>
+      </element>
+      <!-- Resolved On -->
+      <element action="INSERT_OR_UPDATE">
+        <column_label>Resolved On</column_label>
+        <element>u_resolved_on</element>
+        <internal_type>glide_date_time</internal_type>
+      </element>
+      <!-- Outage Declared By (restricted field) -->
+      <element action="INSERT_OR_UPDATE">
+        <column_label>Outage Declared By</column_label>
+        <element>u_outage_declared_by</element>
+        <internal_type>reference</internal_type>
+        <max_length>32</max_length>
+        <reference>sys_user</reference>
+      </element>
+      <!-- Outage Declared On -->
+      <element action="INSERT_OR_UPDATE">
+        <column_label>Outage Declared On</column_label>
+        <element>u_outage_declared_on</element>
+        <internal_type>glide_date_time</internal_type>
+      </element>
+    </columns>
+    <label>Anomaly Event</label>
+    <name>u_anomaly_event</name>
+    <sys_class_name>sys_db_object</sys_class_name>
+    <sys_name>u_anomaly_event</sys_name>
+    <sys_package display_value="ITSMMT Anomaly Detection" source="x_itsmmt_anomaly"/>
+    <sys_scope display_value="Global">global</sys_scope>
+  </sys_db_object>
+
+  <!-- State Choice Values -->
+  <sys_choice action="INSERT_OR_UPDATE">
+    <element>u_state</element>
+    <label>Normal</label>
+    <name>u_anomaly_event</name>
+    <sequence>1</sequence>
+    <value>1</value>
+  </sys_choice>
+  <sys_choice action="INSERT_OR_UPDATE">
+    <element>u_state</element>
+    <label>Anomalous</label>
+    <name>u_anomaly_event</name>
+    <sequence>2</sequence>
+    <value>2</value>
+  </sys_choice>
+  <sys_choice action="INSERT_OR_UPDATE">
+    <element>u_state</element>
+    <label>Degraded</label>
+    <name>u_anomaly_event</name>
+    <sequence>3</sequence>
+    <value>3</value>
+  </sys_choice>
+  <sys_choice action="INSERT_OR_UPDATE">
+    <element>u_state</element>
+    <label>Outage</label>
+    <name>u_anomaly_event</name>
+    <sequence>4</sequence>
+    <value>4</value>
+  </sys_choice>
+</record_update>

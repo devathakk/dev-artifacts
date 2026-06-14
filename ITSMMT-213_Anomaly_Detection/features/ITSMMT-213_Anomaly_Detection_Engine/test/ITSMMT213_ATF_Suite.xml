@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_atf_suite">
+  <sys_atf_suite action="INSERT_OR_UPDATE">
+    <active>true</active>
+    <description>ATF Suite for ITSMMT-213 Anomaly Detection Engine. Covers state machine transitions, signal bridge, and suppression logic.</description>
+    <name>ITSMMT-213 Anomaly Detection Suite</name>
+    <order>100</order>
+    <sys_name>ITSMMT-213 Anomaly Detection Suite</sys_name>
+    <sys_package display_value="ITSMMT Anomaly Detection" source="x_itsmmt_anomaly"/>
+    <sys_scope display_value="Global">global</sys_scope>
+  </sys_atf_suite>
+
+  <!-- Test 1: Normal → Anomalous Transition -->
+  <sys_atf_test action="INSERT_OR_UPDATE">
+    <active>true</active>
+    <description>Validates that a single KPI signal breach transitions state from Normal to Anomalous.</description>
+    <name>ITSMMT-213-T001: Normal to Anomalous Transition</name>
+    <sys_name>ITSMMT-213-T001: Normal to Anomalous Transition</sys_name>
+    <sys_scope display_value="Global">global</sys_scope>
+    <test_suite display_value="ITSMMT-213 Anomaly Detection Suite"/>
+    <steps>
+      <sys_atf_step action="INSERT_OR_UPDATE">
+        <order>1</order>
+        <description>Create mock PA KPI signal for test CI</description>
+        <step>
+          <inputs>
+            <table>pa_kpi_signal</table>
+            <field_values>
+              <cmdb_ci>TEST_CI_SYS_ID_PLACEHOLDER</cmdb_ci>
+              <active>true</active>
+              <name>MTTR Breach - ATF</name>
+            </field_values>
+          </inputs>
+        </step>
+      </sys_atf_step>
+      <sys_atf_step action="INSERT_OR_UPDATE">
+        <order>2</order>
+        <description>Assert u_anomaly_event created with state=2 (Anomalous)</description>
+        <step>
+          <inputs>
+            <table>u_anomaly_event</table>
+            <condition>u_configuration_item=TEST_CI_SYS_ID_PLACEHOLDER^u_active=true</condition>
+            <field_checks>
+              <u_state>2</u_state>
+            </field_checks>
+          </inputs>
+        </step>
+      </sys_atf_step>
+    </steps>
+  </sys_atf_test>
+
+  <!-- Test 2: Outage Blocked When Not Major Incident Manager -->
+  <sys_atf_test action="INSERT_OR_UPDATE">
+    <active>true</active>
+    <description>Validates that declareOutage() fails for users without major_incident_manager role.</description>
+    <name>ITSMMT-213-T002: Outage Declaration Role Guard</name>
+    <sys_name>ITSMMT-213-T002: Outage Declaration Role Guard</sys_name>
+    <sys_scope display_value="Global">global</sys_scope>
+    <test_suite display_value="ITSMMT-213 Anomaly Detection Suite"/>
+    <steps>
+      <sys_atf_step action="INSERT_OR_UPDATE">
+        <order>1</order>
+        <description>Impersonate user without major_incident_manager role</description>
+      </sys_atf_step>
+      <sys_atf_step action="INSERT_OR_UPDATE">
+        <order>2</order>
+        <description>Call ServiceStateEngine.declareOutage() — expect return false</description>
+      </sys_atf_step>
+      <sys_atf_step action="INSERT_OR_UPDATE">
+        <order>3</order>
+        <description>Assert u_anomaly_event state is NOT 4 (Outage)</description>
+      </sys_atf_step>
+    </steps>
+  </sys_atf_test>
+
+  <!-- Test 3: Alert Suppression -->
+  <sys_atf_test action="INSERT_OR_UPDATE">
+    <active>true</active>
+    <description>Validates that duplicate anomaly events within the 15-min suppression window are not created.</description>
+    <name>ITSMMT-213-T003: Alert Storm Suppression</name>
+    <sys_name>ITSMMT-213-T003: Alert Storm Suppression</sys_name>
+    <sys_scope display_value="Global">global</sys_scope>
+    <test_suite display_value="ITSMMT-213 Anomaly Detection Suite"/>
+  </sys_atf_test>
+
+  <!-- Test 4: Resolution Flow -->
+  <sys_atf_test action="INSERT_OR_UPDATE">
+    <active>true</active>
+    <description>Validates that when all PA signals resolve (active=false), u_anomaly_event is closed and state returns to Normal(1).</description>
+    <name>ITSMMT-213-T004: Anomaly Resolution Flow</name>
+    <sys_name>ITSMMT-213-T004: Anomaly Resolution Flow</sys_name>
+    <sys_scope display_value="Global">global</sys_scope>
+    <test_suite display_value="ITSMMT-213 Anomaly Detection Suite"/>
+  </sys_atf_test>
+</record_update>

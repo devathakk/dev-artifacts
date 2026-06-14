@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script">
+  <sys_script action="INSERT_OR_UPDATE">
+    <abort_action>false</abort_action>
+    <action_delete>false</action_delete>
+    <action_insert>true</action_insert>
+    <action_query>false</action_query>
+    <action_update>true</action_update>
+    <active>true</active>
+    <add_message>false</add_message>
+    <advanced>true</advanced>
+    <change_fields>false</change_fields>
+    <client_callable>false</client_callable>
+    <collection>pa_kpi_signal</collection>
+    <condition/>
+    <description>Bridges PA KPI Signal events to u_anomaly_event table. Triggers ServiceStateEngine on signal insert/update.</description>
+    <execute_function>false</execute_function>
+    <filter_condition/>
+    <is_rest>false</is_rest>
+    <message/>
+    <name>AnomalySignalBridge</name>
+    <order>100</order>
+    <priority>100</priority>
+    <rest_method/>
+    <rest_method_text/>
+    <rest_service/>
+    <rest_service_text/>
+    <rest_variables/>
+    <role_conditions/>
+    <script><![CDATA[
+(function executeRule(current, previous /*null when async*/) {
+
+    var ciSysId = current.cmdb_ci.toString();
+    if (!ciSysId) {
+        gs.warn('AnomalySignalBridge: No CMDB CI on signal ' + current.sys_id);
+        return;
+    }
+
+    // Suppress if alert suppression is active
+    if (gs.getProperty('u_anomaly.alert_suppression_enabled', 'true') === 'true') {
+        if (_isDuplicateWithinWindow(ciSysId, 15)) {
+            gs.info('AnomalySignalBridge: Suppressed duplicate signal for CI ' + ciSysId);
+            return;
+        }
+    }
+
+    // Upsert anomaly event
+    var eventGr = new GlideRecord('u_anomaly_event');
+    eventGr.addQuery('u_configuration_item', ciSysId);
+    eventGr.addQuery('u_active', true);
+    eventGr.setLimit(1);
+    eventGr.query();
+
+    var engine = new ServiceStateEngine(ciSysId);
+
+    if (eventGr.next()) {
+        // Existing active event — re-evaluate state
+        var newState = engine.evaluateTransition(eventGr.u_state.toString());
+        if (newState.toString() !== eventGr.u_state.toString()) {
+            eventGr.u_state              = newState;
+            eventGr.u_last_evaluated_on  = new GlideDateTime();
+            eventGr.u_signal_count       = parseInt(eventGr.u_signal_count) + 1;
+            eventGr.update();
+            gs.info('AnomalySignalBridge: State transitioned to ' + newState + ' for CI ' + ciSysId);
+        }
+    } else {
+        // New anomaly event
+        eventGr.initialize();
+        eventGr.u_configuration_item = ciSysId;
+        eventGr.u_state              = engine.evaluateTransition(ServiceStateEngine.STATE.NORMAL.toString());
+        eventGr.u_signal_source      = current.sys_id;
+        eventGr.u_signal_name        = current.name.toString();
+        eventGr.u_active             = true;
+        eventGr.u_signal_count       = 1;
+        eventGr.u_detected_on        = new GlideDateTime();
+        eventGr.u_last_evaluated_on  = new GlideDateTime();
+        eventGr.insert();
+        gs.info('AnomalySignalBridge: New anomaly event created for CI ' + ciSysId);
+    }
+
+    function _isDuplicateWithinWindow(ciId, windowMinutes) {
+        var windowStart = new GlideDateTime();
+        windowStart.addSeconds(-(windowMinutes * 60));
+
+        var dup = new GlideRecord('u_anomaly_event');
+        dup.addQuery('u_configuration_item', ciId);
+        dup.addQuery('u_detected_on', '>=', windowStart.getValue());
+        dup.query();
+        return dup.hasNext();
+    }
+
+})(current, previous);
+    ]]></script>
+    <sys_class_name>sys_script</sys_class_name>
+    <sys_name>AnomalySignalBridge</sys_name>
+    <sys_package display_value="ITSMMT Anomaly Detection" source="x_itsmmt_anomaly"/>
+    <sys_scope display_value="Global">global</sys_scope>
+    <when>after</when>
+  </sys_script>
+</record_update>

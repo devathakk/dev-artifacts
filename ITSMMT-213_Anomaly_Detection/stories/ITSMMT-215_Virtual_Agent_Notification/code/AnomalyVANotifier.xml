@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script_include">
+  <sys_script_include action="INSERT_OR_UPDATE">
+    <access>public</access>
+    <active>true</active>
+    <api_name>global.AnomalyVANotifier</api_name>
+    <client_callable>false</client_callable>
+    <description>Sends Virtual Agent (va_interaction) proactive push notifications to users impacted by anomaly events.</description>
+    <name>AnomalyVANotifier</name>
+    <script><![CDATA[
+var AnomalyVANotifier = Class.create();
+
+AnomalyVANotifier.prototype = {
+
+    initialize: function() {
+        this.log = new GSLog('u_anomaly.log.level', 'AnomalyVANotifier');
+    },
+
+    /**
+     * Send VA notification for an anomaly event.
+     * @param {GlideRecord} anomalyEvent - u_anomaly_event record
+     */
+    notifyForEvent: function(anomalyEvent) {
+        var ciName    = anomalyEvent.u_configuration_item.getDisplayValue();
+        var state     = parseInt(anomalyEvent.u_state.toString());
+        var stateLabel = this._stateLabel(state);
+        var incNumber = this._getLinkedIncident(anomalyEvent.sys_id.toString());
+
+        var message = 'Proactive Alert: ' + ciName + ' has entered ' + stateLabel + ' state.\n' +
+                      (incNumber ? 'Incident: ' + incNumber + ' has been raised automatically.' : '') +
+                      '\nPlease review and take action.';
+
+        // Get impacted users (users with open tasks/incidents on this CI)
+        var users = this._getImpactedUsers(anomalyEvent.u_configuration_item.toString());
+        users.forEach(function(userSysId) {
+            this._pushVAMessage(userSysId, message, anomalyEvent.sys_id.toString());
+        }.bind(this));
+
+        this.log.logInfo('notifyForEvent | Notified ' + users.length + ' users for anomaly event ' +
+            anomalyEvent.number.toString());
+    },
+
+    _pushVAMessage: function(userSysId, message, anomalyEventSysId) {
+        try {
+            var interaction = new GlideRecord('va_interaction');
+            interaction.initialize();
+            interaction.channel        = 'web';
+            interaction.user           = userSysId;
+            interaction.active         = true;
+            interaction.u_anomaly_event = anomalyEventSysId;
+            interaction.insert();
+
+            // Use NLU/VA API to push message
+            // Note: Replace with actual VA API call for your instance
+            gs.eventQueue('u_anomaly.va.notify', interaction, message, userSysId);
+        } catch(e) {
+            this.log.logError('_pushVAMessage | Failed for user ' + userSysId + ': ' + e.message);
+        }
+    },
+
+    _getImpactedUsers: function(ciSysId) {
+        var users = [];
+        var seen  = {};
+
+        // Users with open incidents on this CI
+        var gr = new GlideRecord('incident');
+        gr.addQuery('cmdb_ci', ciSysId);
+        gr.addQuery('state', 'NOT IN', '6,7');
+        gr.query();
+        while (gr.next()) {
+            var uid = gr.caller_id.toString();
+            if (uid && !seen[uid]) {
+                users.push(uid);
+                seen[uid] = true;
+            }
+        }
+        return users;
+    },
+
+    _getLinkedIncident: function(anomalySysId) {
+        var gr = new GlideRecord('incident');
+        gr.addQuery('u_anomaly_event', anomalySysId);
+        gr.addQuery('state', 'NOT IN', '6,7');
+        gr.setLimit(1);
+        gr.query();
+        return gr.next() ? gr.number.toString() : null;
+    },
+
+    _stateLabel: function(state) {
+        return { 1: 'Normal', 2: 'Anomalous', 3: 'Degraded', 4: 'Outage' }[state] || 'Unknown';
+    },
+
+    type: 'AnomalyVANotifier'
+};
+    ]]></script>
+    <sys_scope display_value="Global">global</sys_scope>
+    <sys_package display_value="ITSMMT Anomaly Detection" source="x_itsmmt_anomaly"/>
+  </sys_script_include>
+</record_update>

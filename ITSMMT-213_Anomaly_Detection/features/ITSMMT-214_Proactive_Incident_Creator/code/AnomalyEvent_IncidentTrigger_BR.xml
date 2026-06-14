@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script">
+  <sys_script action="INSERT_OR_UPDATE">
+    <name>AnomalyEvent_IncidentTrigger</name>
+    <collection>u_anomaly_event</collection>
+    <when>async</when>
+    <action_insert>true</action_insert>
+    <action_update>true</action_update>
+    <action_delete>false</action_delete>
+    <active>true</active>
+    <filter_condition>u_stateIN3,4</filter_condition>
+    <description>Triggers ProactiveIncidentCreator when u_anomaly_event state reaches Degraded(3) or Outage(4).</description>
+    <script><![CDATA[
+(function executeRule(current, previous) {
+
+    // Only fire when state transitions into Degraded or Outage
+    if (previous && previous.u_state.toString() === current.u_state.toString()) {
+        return;
+    }
+
+    var creator = new ProactiveIncidentCreator();
+    creator.createForAnomalyEvent(current);
+
+})(current, previous);
+    ]]></script>
+    <sys_scope display_value="Global">global</sys_scope>
+  </sys_script>
+</record_update>
