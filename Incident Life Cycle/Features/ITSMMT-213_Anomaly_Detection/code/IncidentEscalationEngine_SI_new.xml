@@ -40,18 +40,6 @@ IncidentEscalationEngine.prototype = {
         return true;
     },
 
-    _handleBreach: function() {
-        if (this._gr.priority != 1) {
-            this._gr.priority  = 1;
-            this._gr.escalation = 3;
-            this._gr.update();
-            gs.warn('IncidentEscalationEngine: Promoted ' + this._gr.number + ' to P1 on SLA breach.');
-        }
-        this._notifyManager('SLA BREACHED for ' + this._gr.number + '. Auto-promoted to P1.');
-        this._auditEscalation('SLA_BREACH');
-        return true;
-    },
-
     _notifyManager: function(message) {
         var assignmentGroup = this._gr.assignment_group.toString();
         if (!assignmentGroup) return;
