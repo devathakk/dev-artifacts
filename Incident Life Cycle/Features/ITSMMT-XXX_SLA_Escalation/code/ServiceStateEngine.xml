@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script_include">
+  <sys_script_include action="INSERT_OR_UPDATE">
+    <access>public</access>
+    <active>true</active>
+    <api_name>global.ServiceStateEngine</api_name>
+    <caller_access/>
+    <client_callable>false</client_callable>
+    <description>Four-state machine engine for service anomaly detection. Enforces state transitions: Normal(1) → Anomalous(2) → Degraded(3) → Outage(4). NOTE: Outage state can ONLY be set by users with major_incident_manager role.</description>
+    <name>ServiceStateEngine</name>
+    <script><![CDATA[
+var ServiceStateEngine = Class.create();
+
+ServiceStateEngine.STATE = {
+    NORMAL:    1,
+    ANOMALOUS: 2,
+    DEGRADED:  3,
+    OUTAGE:    4
+};
+
+ServiceStateEngine.prototype = {
+
+    initialize: function(serviceCI) {
+        this.serviceCI  = serviceCI;
+        this.log        = new GSLog('u_anomaly.log.level', 'ServiceStateEngine');
+        this.propBaseline = parseInt(gs.getProperty('u_anomaly.baseline_days', '90'));
+        this.propStdDev   = parseFloat(gs.getProperty('u_anomaly.std_dev_threshold', '2'));
+        this.propDegradedCount = parseInt(gs.getProperty('u_anomaly.degraded_kpi_count', '3'));
+    },
+
+    /**
+     * Evaluate current KPI signal breach count and transition state.
+     * @param {String} currentState - Current state value from u_anomaly_event
+     * @returns {Number} - New state value
+     */
+    evaluateTransition: function(currentState) {
+        var breachCount = this._countActiveBreaches();
+        var newState    = parseInt(currentState);
+
+        this.log.logInfo('evaluateTransition | CI: ' + this.serviceCI +
+            ' | breachCount: ' + breachCount +
+            ' | currentState: ' + currentState);
+
+        if (breachCount === 0) {
+            newState = ServiceStateEngine.STATE.NORMAL;
+        } else if (breachCount >= this.propDegradedCount) {
+            newState = ServiceStateEngine.STATE.DEGRADED;
+        } else if (breachCount > 0) {
+            newState = ServiceStateEngine.STATE.ANOMALOUS;
+        }
+
+        // HARD CONSTRAINT: Outage state is NEVER set automatically.
+        // It can only be promoted by a user with major_incident_manager role.
+        if (newState === ServiceStateEngine.STATE.OUTAGE) {
+            this.log.logWarning('evaluateTransition | Outage state blocked — automatic transition not allowed.');
+            newState = ServiceStateEngine.STATE.DEGRADED;
+        }
+
+        return newState;
+    },
+
+    /**
+     * Promote service to Outage. Restricted to major_incident_manager role.
+     * @returns {Boolean} success
+     */
+    declareOutage: function() {
+        if (!gs.hasRole('major_incident_manager')) {
+            gs.addErrorMessage('Outage declaration requires the major_incident_manager role.');
+            return false;
+        }
+
+        var gr = new GlideRecord('u_anomaly_event');
+        gr.addQuery('u_configuration_item', this.serviceCI);
+        gr.addQuery('u_state', '!=', ServiceStateEngine.STATE.NORMAL);
+        gr.setLimit(1);
+        gr.query();
+
+        if (gr.next()) {
+            gr.u_state            = ServiceStateEngine.STATE.OUTAGE;
+            gr.u_outage_declared_by = gs.getUserID();
+            gr.u_outage_declared_on = new GlideDateTime().getDisplayValue();
+            gr.update();
+            this.log.logInfo('declareOutage | Outage declared for CI: ' + this.serviceCI +
+                ' by user: ' + gs.getUserName());
+            return true;
+        }
+
+        return false;
+    },
+
+    /**
+     * Count active PA KPI signal breaches for this CI.
+     * @returns {Number}
+     */
+    _countActiveBreaches: function() {
+        var gr = new GlideRecord('pa_kpi_signal');
+        gr.addQuery('cmdb_ci', this.serviceCI);
+        gr.addQuery('active', true);
+        gr.query();
+        return gr.getRowCount();
+    },
+
+    type: 'ServiceStateEngine'
+};
+    ]]></script>
+    <sys_class_name>sys_script_include</sys_class_name>
+    <sys_name>ServiceStateEngine</sys_name>
+    <sys_package display_value="ITSMMT Anomaly Detection" source="x_itsmmt_anomaly"/>
+    <sys_scope display_value="Global">global</sys_scope>
+  </sys_script_include>
+</record_update>
