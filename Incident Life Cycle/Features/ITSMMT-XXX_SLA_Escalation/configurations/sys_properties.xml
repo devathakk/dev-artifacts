@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_properties">
+
+  <sys_properties action="INSERT_OR_UPDATE">
+    <name>u_escalation.sla_warn_minutes</name>
+    <value>30</value>
+    <description>Minutes remaining on SLA before a P2 incident triggers a warning escalation</description>
+    <type>integer</type>
+    <sys_name>u_escalation.sla_warn_minutes</sys_name>
+  </sys_properties>
+
+  <sys_properties action="INSERT_OR_UPDATE">
+    <name>u_escalation.auto_promote_p1</name>
+    <value>true</value>
+    <description>When true, incidents that breach SLA are automatically promoted to P1</description>
+    <type>boolean</type>
+    <sys_name>u_escalation.auto_promote_p1</sys_name>
+  </sys_properties>
+
+  <sys_properties action="INSERT_OR_UPDATE">
+    <name>u_escalation.audit_enabled</name>
+    <value>true</value>
+    <description>Enable writing escalation events to u_incident_escalation_audit table</description>
+    <type>boolean</type>
+    <sys_name>u_escalation.audit_enabled</sys_name>
+  </sys_properties>
+
+</record_update>
