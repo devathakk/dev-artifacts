@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_properties">
+  <sys_properties action="INSERT_OR_UPDATE">
+    <name>u_anomaly.baseline_days</name>
+    <value>90</value>
+    <description>Number of days used for anomaly baseline calculation</description>
+    <type>integer</type>
+    <sys_name>u_anomaly.baseline_days</sys_name>
+  </sys_properties>
+  <sys_properties action="INSERT_OR_UPDATE">
+    <name>u_anomaly.std_dev_threshold</name>
+    <value>2</value>
+    <description>Standard deviation multiplier to trigger Anomalous state</description>
+    <type>integer</type>
+    <sys_name>u_anomaly.std_dev_threshold</sys_name>
+  </sys_properties>
+  <sys_properties action="INSERT_OR_UPDATE">
+    <name>u_anomaly.degraded_kpi_count</name>
+    <value>3</value>
+    <description>Number of simultaneously anomalous KPIs required to enter Degraded state</description>
+    <type>integer</type>
+    <sys_name>u_anomaly.degraded_kpi_count</sys_name>
+  </sys_properties>
+  <sys_properties action="INSERT_OR_UPDATE">
+    <name>u_anomaly.alert_suppression_enabled</name>
+    <value>true</value>
+    <description>Enable storm suppression — suppress duplicate anomaly events within 15 min window</description>
+    <type>boolean</type>
+    <sys_name>u_anomaly.alert_suppression_enabled</sys_name>
+  </sys_properties>
+</record_update>
